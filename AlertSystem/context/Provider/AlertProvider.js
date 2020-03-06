@@ -5,8 +5,13 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableWithoutFeedback,
+  Button,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import AlertContext from '../AlertContext';
+
+const w = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   alertContainer: {
@@ -58,7 +63,10 @@ class AlertProvider extends React.Component {
     title: '',
     body: '',
     visible: false,
+    contentHeight: 0,
   };
+
+  animated = new Animated.Value(0);
 
   alert = ({
     title = '',
@@ -67,23 +75,68 @@ class AlertProvider extends React.Component {
     ctaText = '',
     ctaOnPress = null,
   }) => {
-    this.setState({title, body, ctaText, display, visible: true});
+    this.setState({title, body, ctaText, ctaOnPress, display, visible: true});
+    Animated.timing(this.animated, {
+      toValue: 1,
+      useNativeDriver: true,
+      duration: 150,
+    }).start();
   };
 
   close = () => {
-    this.setState({visible: false});
+    Animated.timing(this.animated, {
+      toValue: 0,
+      useNativeDriver: true,
+      duration: 150,
+    }).start(() => this.setState({visible: false}));
+  };
+
+  renderItem = () => {
+    const {title, body} = this.state;
+    return (
+      <React.Fragment>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.body}>{body}</Text>
+      </React.Fragment>
+    );
+  };
+
+  onLayout = ({nativeEvent}) => {
+    const height = nativeEvent.layout.height;
+    this.setState({contentHeight: height});
   };
 
   render() {
-    const {title, body, visible, display} = this.state;
+    const {visible, display, ctaOnPress, ctaText, contentHeight} = this.state;
     const containerStyles = [styles.alertContainer];
 
     if (display === 'bottom') {
       containerStyles.push(style.bottom);
     } else if (display === 'top') {
       containerStyles.push(styles.top);
+      containerStyles.push({
+        transform: [
+          {
+            translateY: this.animated.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-contentHeight, 0],
+            }),
+          },
+        ],
+      });
     } else {
       containerStyles.push(styles.modal);
+      containerStyles.push(styles.top);
+      containerStyles.push({
+        transform: [
+          {
+            translateY: this.animated.interpolate({
+              inputRange: [0, 1],
+              outputRange: [contentHeight, 0],
+            }),
+          },
+        ],
+      });
     }
 
     return (
@@ -92,20 +145,22 @@ class AlertProvider extends React.Component {
         {visible && display === 'modal' && (
           <TouchableWithoutFeedback onPress={this.close}>
             <View style={styles.modalContainer}>
-              <View style={styles.modal}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.body}>{body}</Text>
-              </View>
+              <View style={styles.modal}>{this.renderItem()}</View>
+              {ctaOnPress && <Button title={ctaText} onPress={ctaOnPress} />}
             </View>
           </TouchableWithoutFeedback>
         )}
         {visible && display !== 'modal' && (
-          <View style={containerStyles}>
-            <SafeAreaView>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.body}>{body}</Text>
-            </SafeAreaView>
-          </View>
+          <TouchableWithoutFeedback
+            onPress={this.close}
+            onLayout={this.onLayout}>
+            <Animated.View style={containerStyles}>
+              <SafeAreaView forceInset={{top: 'always'}}>
+                {this.renderItem()}
+                {ctaOnPress && <Button title={ctaText} onPress={ctaOnPress} />}
+              </SafeAreaView>
+            </Animated.View>
+          </TouchableWithoutFeedback>
         )}
       </AlertContext.Provider>
     );
