@@ -124,8 +124,7 @@ class AlertProvider extends React.Component {
           },
         ],
       });
-    } else {
-      containerStyles.push(styles.modal);
+    } else if (display === 'bottom') {
       containerStyles.push(styles.top);
       containerStyles.push({
         transform: [
@@ -137,6 +136,19 @@ class AlertProvider extends React.Component {
           },
         ],
       });
+    } else if (display === 'modal') {
+      containerStyles.push(styles.modal);
+      containerStyles.push({
+        opacity: this.animated,
+        transform: [
+          {
+            translateY: this.animated.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.6, 1],
+            }),
+          },
+        ],
+      });
     }
 
     return (
@@ -144,8 +156,10 @@ class AlertProvider extends React.Component {
         {this.props.children}
         {visible && display === 'modal' && (
           <TouchableWithoutFeedback onPress={this.close}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modal}>{this.renderItem()}</View>
+            <View style={[styles.modalContainer]}>
+              <Animated.View style={[styles.modal, containerStyles]}>
+                {this.renderItem()}
+              </Animated.View>
               {ctaOnPress && <Button title={ctaText} onPress={ctaOnPress} />}
             </View>
           </TouchableWithoutFeedback>

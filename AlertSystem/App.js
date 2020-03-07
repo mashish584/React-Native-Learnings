@@ -14,7 +14,7 @@ const App = props => {
           props.alert({
             title: 'Title',
             body: 'Body Text',
-            display: 'top',
+            display: 'modal',
             ctaText: 'Confirm',
             ctaOnPress: () => alert('Call to action'),
           })
